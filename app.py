@@ -18,6 +18,7 @@ import os
 # Must be set before torch is imported.
 os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
 
+import re
 import shutil
 import subprocess
 import tempfile
@@ -313,9 +314,76 @@ def convert_video(video_path: str | None,
 # UI
 # --------------------------------------------------------------------------- #
 
+# Brand palette: orange accent on a near-black background with dark gray panels.
+ACCENT = "#ff7a3b"
+BACKGROUND = "#0d0d0d"
+PANEL = "#2c2c2c"
+
+LOGO_PATH = Path(__file__).resolve().parent / "assets" / "logo.svg"
+
+
+def logo_html() -> str:
+    """Inline the logo SVG (if present), scaled to a small header size."""
+    if not LOGO_PATH.exists():
+        return ""
+    svg = LOGO_PATH.read_text(encoding="utf-8")
+    # Drop the intrinsic pixel size; the viewBox keeps the aspect ratio.
+    svg = re.sub(r'(<svg[^>]*?)\s+width="[^"]*"', r"\1", svg, count=1)
+    svg = re.sub(r'(<svg[^>]*?)\s+height="[^"]*"', r"\1", svg, count=1)
+    svg = svg.replace("<svg", '<svg style="height:32px;width:auto;display:block"', 1)
+    return f'<div style="display:flex;align-items:center;padding:6px 0 2px;">{svg}</div>'
+
+_orange = gr.themes.colors.Color(
+    name="brand_orange",
+    c50="#fff3ec", c100="#ffe5d6", c200="#ffcbad", c300="#ffab7d",
+    c400="#ff9257", c500=ACCENT, c600="#f45f1c", c700="#cc4a12",
+    c800="#a03a10", c900="#7d2f10", c950="#431806",
+)
+
+
+def build_theme() -> gr.themes.Base:
+    theme = gr.themes.Soft(primary_hue=_orange, neutral_hue=gr.themes.colors.zinc)
+    # Force the same dark look in both light and dark browser modes.
+    dual = {
+        "body_background_fill": BACKGROUND,
+        "background_fill_primary": PANEL,
+        "background_fill_secondary": "#232323",
+        "block_background_fill": PANEL,
+        "panel_background_fill": PANEL,
+        "input_background_fill": "#1f1f1f",
+        "checkbox_background_color": "#1f1f1f",
+        "checkbox_background_color_selected": ACCENT,
+        "border_color_primary": "#3a3a3a",
+        "block_border_color": "#3a3a3a",
+        "input_border_color": "#3a3a3a",
+        "body_text_color": "#e8e8e8",
+        "body_text_color_subdued": "#9a9a9a",
+        "block_title_text_color": "#e8e8e8",
+        "block_label_text_color": "#b5b5b5",
+        "block_info_text_color": "#9a9a9a",
+        "block_label_background_fill": "#1f1f1f",
+        "button_primary_background_fill": ACCENT,
+        "button_primary_background_fill_hover": "#ff9257",
+        "button_primary_text_color": "#1a1208",
+        "button_secondary_background_fill": "#3a3a3a",
+        "button_secondary_background_fill_hover": "#4a4a4a",
+        "button_secondary_text_color": "#e8e8e8",
+        "color_accent_soft": "#43281a",
+        "loader_color": ACCENT,
+        "slider_color": ACCENT,
+        "link_text_color": ACCENT,
+        "link_text_color_hover": "#ff9257",
+        "table_even_background_fill": PANEL,
+        "table_odd_background_fill": "#262626",
+    }
+    return theme.set(**dual, **{f"{k}_dark": v for k, v in dual.items()})
+
+
 def build_ui() -> gr.Blocks:
     device_names = {"cuda": "NVIDIA GPU (CUDA)", "mps": "Apple Silicon (MPS)", "cpu": "CPU"}
-    with gr.Blocks(title="Depth Video Converter", theme=gr.themes.Soft()) as demo:
+    with gr.Blocks(title="Depth Video Converter", theme=build_theme()) as demo:
+        if (logo := logo_html()):
+            gr.HTML(logo)
         gr.Markdown(
             "# Depth Video Converter\n"
             f"Convert a video into a grayscale depth-map video with Depth Anything V2. "
