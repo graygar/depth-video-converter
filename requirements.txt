@@ -1,0 +1,16 @@
+# Depth Video Converter
+#
+# NOTE (Windows + NVIDIA GPU): install the CUDA build of PyTorch FIRST,
+# then run `pip install -r requirements.txt`:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+#
+# On macOS the default `torch` wheel already includes Apple Silicon (MPS) support.
+
+torch>=2.2
+torchvision>=0.17
+transformers>=4.45
+gradio>=4.44
+opencv-python>=4.9
+numpy
+pillow
+imageio-ffmpeg>=0.4.9
